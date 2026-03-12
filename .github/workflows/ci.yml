@@ -65,3 +65,97 @@ jobs:
       - name: Import Flask App
         working-directory: python/dashboard
         run: python -c "from app import app; print(app.url_map)"
+
+  health-check:
+    name: linux-e2e-health-check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure CMake
+        run: cmake -S . -B build
+
+      - name: Build Native Targets
+        run: cmake --build build --config Release
+
+      - name: Start Server and Agent
+        shell: bash
+        run: |
+          ./build/sysnetmon-server 9090 > /tmp/sysnetmon-server.log 2>&1 &
+          echo $! > /tmp/sysnetmon-server.pid
+          sleep 1
+          ./build/sysnetmon-agent 127.0.0.1 9090 ci-agent-1 1 > /tmp/sysnetmon-agent.log 2>&1 &
+          echo $! > /tmp/sysnetmon-agent.pid
+          sleep 4
+
+      - name: Validate Live Snapshot
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import socket
+
+          sock = socket.create_connection(("127.0.0.1", 9090), timeout=5)
+          register = {"type": "register", "role": "dashboard", "host": "ci-health-check"}
+          sock.sendall((json.dumps(register) + "\n").encode("utf-8"))
+          sock.settimeout(4)
+
+          chunks = []
+          try:
+              while True:
+                  data = sock.recv(4096)
+                  if not data:
+                      break
+                  chunks.append(data.decode("utf-8"))
+                  if "\"type\":\"snapshot\"" in chunks[-1] or "\"type\": \"snapshot\"" in chunks[-1]:
+                      break
+          except socket.timeout:
+              pass
+          finally:
+              sock.close()
+
+          lines = []
+          for chunk in chunks:
+              lines.extend([line for line in chunk.splitlines() if line.strip()])
+
+          snapshot = None
+          for line in lines:
+              try:
+                  obj = json.loads(line)
+              except Exception:
+                  continue
+              if obj.get("type") == "snapshot":
+                  snapshot = obj
+                  break
+
+          if snapshot is None:
+              raise SystemExit("No snapshot event received from server")
+
+          metrics = snapshot.get("metrics", [])
+          if not metrics:
+              raise SystemExit("Snapshot did not contain host metrics")
+
+          hosts = {m.get("host") for m in metrics}
+          if "ci-agent-1" not in hosts:
+              raise SystemExit("Expected ci-agent-1 in snapshot metrics")
+
+          print("Health check passed. Hosts:", sorted(hosts))
+          PY
+
+      - name: Dump logs on failure
+        if: failure()
+        shell: bash
+        run: |
+          echo "===== server log ====="
+          cat /tmp/sysnetmon-server.log || true
+          echo "===== agent log ====="
+          cat /tmp/sysnetmon-agent.log || true
+
+      - name: Stop Processes
+        if: always()
+        shell: bash
+        run: |
+          if [ -f /tmp/sysnetmon-agent.pid ]; then kill $(cat /tmp/sysnetmon-agent.pid) 2>/dev/null || true; fi
+          if [ -f /tmp/sysnetmon-server.pid ]; then kill $(cat /tmp/sysnetmon-server.pid) 2>/dev/null || true; fi

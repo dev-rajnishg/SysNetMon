@@ -1,5 +1,9 @@
 # SysNetMon
 
+## CI Status
+
+[![Cross-Platform CI](https://github.com/dev-rajnishg/SysNetMon/actions/workflows/ci.yml/badge.svg)](https://github.com/dev-rajnishg/SysNetMon/actions/workflows/ci.yml)
+
 SysNetMon is a distributed system monitor built as an infra-focused monorepo for systems and networking roles. It combines a low-level C++ TCP server, cross-platform C++ monitoring daemons, a Python Flask dashboard with Plotly, and AWS alert delivery using S3 and SNS.
 
 The native code now targets Windows, macOS, and Linux. The socket layer uses portable `select`-based TCP handling, while metric collection switches to each platform's native APIs: `/proc` on Linux, Mach and `getifaddrs` on macOS, and Win32 or IP Helper APIs on Windows.
@@ -138,6 +142,9 @@ GitHub Actions workflow `.github/workflows/ci.yml` validates the repo on:
 
 - Windows
 - macOS
+- Linux
+
+It includes a lightweight Linux end-to-end health check that starts the C++ server and one agent, then validates that a dashboard socket client receives a snapshot containing live metrics.
 - Linux
 
 CI builds `sysnetmon-server` and `sysnetmon-agent` with CMake on each OS, and runs Flask dashboard dependency plus import checks.
