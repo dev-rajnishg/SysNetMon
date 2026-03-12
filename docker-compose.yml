@@ -1,0 +1,23 @@
+services:
+  monitor-server:
+    build:
+      context: .
+      dockerfile: docker/server.Dockerfile
+    ports:
+      - "9090:9090"
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: docker/dashboard.Dockerfile
+    environment:
+      MONITOR_SERVER_HOST: monitor-server
+      MONITOR_SERVER_PORT: 9090
+      AWS_REGION: ${AWS_REGION:-ap-south-1}
+      ALERT_S3_BUCKET: ${ALERT_S3_BUCKET:-}
+      ALERT_SNS_TOPIC_ARN: ${ALERT_SNS_TOPIC_ARN:-}
+      ALERT_S3_PREFIX: ${ALERT_S3_PREFIX:-alerts/}
+    ports:
+      - "5000:5000"
+    depends_on:
+      - monitor-server

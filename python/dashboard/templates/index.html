@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SysNetMon Dashboard</title>
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+    <style>
+        :root {
+            --bg: #f4efe6;
+            --panel: rgba(255, 250, 242, 0.92);
+            --ink: #1f2937;
+            --muted: #6b7280;
+            --accent: #c2410c;
+            --accent-2: #0f766e;
+            --border: rgba(31, 41, 55, 0.12);
+            --shadow: 0 24px 60px rgba(120, 53, 15, 0.12);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Georgia, "Times New Roman", serif;
+            color: var(--ink);
+            background:
+                radial-gradient(circle at top left, rgba(194, 65, 12, 0.18), transparent 30%),
+                radial-gradient(circle at top right, rgba(15, 118, 110, 0.12), transparent 28%),
+                linear-gradient(180deg, #f5efe4 0%, #efe5d3 100%);
+        }
+
+        .shell {
+            width: min(1280px, calc(100vw - 32px));
+            margin: 24px auto 36px;
+        }
+
+        .hero {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 18px;
+            margin-bottom: 18px;
+        }
+
+        .panel {
+            background: var(--panel);
+            backdrop-filter: blur(14px);
+            border: 1px solid var(--border);
+            border-radius: 22px;
+            box-shadow: var(--shadow);
+            padding: 20px;
+        }
+
+        h1 {
+            margin: 0 0 10px;
+            font-size: clamp(2rem, 5vw, 4rem);
+            line-height: 0.95;
+            letter-spacing: -0.04em;
+        }
+
+        .eyebrow {
+            margin: 0 0 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            font-size: 0.75rem;
+            color: var(--accent);
+        }
+
+        .status-grid,
+        .charts,
+        .bottom-grid,
+        .host-grid {
+            display: grid;
+            gap: 18px;
+        }
+
+        .status-grid {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            margin-top: 18px;
+        }
+
+        .metric-pill {
+            border-radius: 16px;
+            padding: 14px;
+            background: rgba(255, 255, 255, 0.72);
+            border: 1px solid rgba(31, 41, 55, 0.08);
+        }
+
+        .metric-pill span {
+            display: block;
+            color: var(--muted);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .metric-pill strong {
+            display: block;
+            margin-top: 8px;
+            font-size: 1.5rem;
+        }
+
+        .charts {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            margin-bottom: 18px;
+        }
+
+        .bottom-grid {
+            grid-template-columns: 1.2fr 0.8fr;
+            margin-bottom: 18px;
+        }
+
+        .host-grid {
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        }
+
+        .host-card {
+            border-radius: 18px;
+            padding: 18px;
+            background: rgba(255, 255, 255, 0.78);
+            border: 1px solid rgba(31, 41, 55, 0.08);
+        }
+
+        .host-card h3,
+        .panel h2 {
+            margin: 0 0 12px;
+            font-size: 1.1rem;
+        }
+
+        .host-card p,
+        .feed-item,
+        .rule-item {
+            margin: 6px 0;
+            color: var(--muted);
+        }
+
+        form {
+            display: grid;
+            gap: 10px;
+            margin-top: 14px;
+        }
+
+        input,
+        button {
+            border-radius: 14px;
+            border: 1px solid rgba(31, 41, 55, 0.12);
+            padding: 12px 14px;
+            font: inherit;
+        }
+
+        button {
+            cursor: pointer;
+            background: linear-gradient(120deg, var(--accent), #ea580c);
+            color: white;
+            border: none;
+        }
+
+        button.secondary {
+            background: linear-gradient(120deg, var(--accent-2), #14b8a6);
+        }
+
+        .feed {
+            max-height: 360px;
+            overflow: auto;
+            display: grid;
+            gap: 10px;
+        }
+
+        .feed-item {
+            padding: 12px 14px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(31, 41, 55, 0.08);
+        }
+
+        .feed-item strong {
+            color: var(--ink);
+        }
+
+        .subtle {
+            color: var(--muted);
+            font-size: 0.92rem;
+        }
+
+        @media (max-width: 980px) {
+            .hero,
+            .charts,
+            .bottom-grid,
+            .status-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="shell">
+        <section class="hero">
+            <div class="panel">
+                <p class="eyebrow">Distributed Linux Monitoring</p>
+                <h1>SysNetMon</h1>
+                <p class="subtle">Low-level C++ agents stream live host metrics into a poll-based TCP core. This dashboard layers Plotly telemetry, chat, rule commands, and AWS alert uploads on top of the same event bus.</p>
+                <div class="status-grid">
+                    <div class="metric-pill">
+                        <span>Server</span>
+                        <strong id="serverState">Offline</strong>
+                    </div>
+                    <div class="metric-pill">
+                        <span>Active Hosts</span>
+                        <strong id="hostCount">0</strong>
+                    </div>
+                    <div class="metric-pill">
+                        <span>Alerts Seen</span>
+                        <strong id="alertCount">0</strong>
+                    </div>
+                </div>
+            </div>
+            <div class="panel">
+                <h2>Command Console</h2>
+                <p class="subtle">Examples: <strong>/alert CPU&gt;80%</strong>, <strong>/alert MEMORY&gt;70%</strong>, <strong>/listalerts</strong></p>
+                <form id="commandForm">
+                    <input id="commandText" type="text" placeholder="Enter server command">
+                    <button type="submit">Send Command</button>
+                </form>
+                <form id="chatForm">
+                    <input id="chatFrom" type="text" placeholder="Sender name" value="dashboard-user">
+                    <input id="chatText" type="text" placeholder="Chat overlay message">
+                    <button class="secondary" type="submit">Send Chat</button>
+                </form>
+                <form id="uploadForm">
+                    <button type="submit">Upload Latest Alert to AWS</button>
+                </form>
+                <p class="subtle" id="awsStatus">AWS upload idle</p>
+            </div>
+        </section>
+
+        <section class="charts">
+            <div class="panel"><div id="cpuChart"></div></div>
+            <div class="panel"><div id="memoryChart"></div></div>
+            <div class="panel"><div id="networkChart"></div></div>
+        </section>
+
+        <section class="bottom-grid">
+            <div class="panel">
+                <h2>Host Inventory</h2>
+                <div class="host-grid" id="hostGrid"></div>
+            </div>
+            <div class="panel">
+                <h2>Alert Rules</h2>
+                <div id="ruleList"></div>
+            </div>
+        </section>
+
+        <section class="bottom-grid">
+            <div class="panel">
+                <h2>Alert Feed</h2>
+                <div class="feed" id="alertFeed"></div>
+            </div>
+            <div class="panel">
+                <h2>Chat Overlay</h2>
+                <div class="feed" id="chatFeed"></div>
+            </div>
+        </section>
+    </div>
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

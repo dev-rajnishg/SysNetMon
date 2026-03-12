@@ -1,0 +1,13 @@
+bin/
+__pycache__/
+*.pyc
+.venv/
+.env
+dist/
+build/
+*.o
+*.exe
+*.out
+build/
+*.pid
+*.log
