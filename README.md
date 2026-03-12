@@ -2,7 +2,9 @@
 
 ## CI Status
 
-[![Cross-Platform CI](https://github.com/dev-rajnishg/SysNetMon/actions/workflows/ci.yml/badge.svg)](https://github.com/dev-rajnishg/SysNetMon/actions/workflows/ci.yml)
+[![Native Build](https://github.com/dev-rajnishg/SysNetMon/actions/workflows/native-build.yml/badge.svg)](https://github.com/dev-rajnishg/SysNetMon/actions/workflows/native-build.yml)
+[![Dashboard Check](https://github.com/dev-rajnishg/SysNetMon/actions/workflows/dashboard-check.yml/badge.svg)](https://github.com/dev-rajnishg/SysNetMon/actions/workflows/dashboard-check.yml)
+[![Health Check](https://github.com/dev-rajnishg/SysNetMon/actions/workflows/health-check.yml/badge.svg)](https://github.com/dev-rajnishg/SysNetMon/actions/workflows/health-check.yml)
 
 SysNetMon is a distributed system monitor built as an infra-focused monorepo for systems and networking roles. It combines a low-level C++ TCP server, cross-platform C++ monitoring daemons, a Python Flask dashboard with Plotly, and AWS alert delivery using S3 and SNS.
 
@@ -138,14 +140,17 @@ This launches the C++ server on port `9090` and the dashboard on port `5000`.
 
 ## CI Matrix
 
-GitHub Actions workflow `.github/workflows/ci.yml` validates the repo on:
+GitHub Actions workflows validate the repo with separate pipelines:
+
+- `.github/workflows/native-build.yml` for Windows, macOS, and Linux native builds
+- `.github/workflows/dashboard-check.yml` for Python dashboard checks
+- `.github/workflows/health-check.yml` for Linux end-to-end metric flow
 
 - Windows
 - macOS
 - Linux
 
 It includes a lightweight Linux end-to-end health check that starts the C++ server and one agent, then validates that a dashboard socket client receives a snapshot containing live metrics.
-- Linux
 
 CI builds `sysnetmon-server` and `sysnetmon-agent` with CMake on each OS, and runs Flask dashboard dependency plus import checks.
 

@@ -1,4 +1,4 @@
-name: cross-platform-ci
+name: health-check
 
 on:
   push:
@@ -7,65 +7,6 @@ on:
   pull_request:
 
 jobs:
-  native-build:
-    name: build-${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Configure CMake
-        run: cmake -S . -B build
-
-      - name: Build Native Targets
-        run: cmake --build build --config Release
-
-      - name: Validate Artifacts (Unix)
-        if: runner.os != 'Windows'
-        shell: bash
-        run: |
-          test -f build/sysnetmon-server
-          test -f build/sysnetmon-agent
-
-      - name: Validate Artifacts (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          if (!(Test-Path "build/Release/sysnetmon-server.exe") -and !(Test-Path "build/sysnetmon-server.exe")) {
-            throw "Server artifact missing"
-          }
-          if (!(Test-Path "build/Release/sysnetmon-agent.exe") -and !(Test-Path "build/sysnetmon-agent.exe")) {
-            throw "Agent artifact missing"
-          }
-
-  dashboard-check:
-    name: python-dashboard-check
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install Dashboard Dependencies
-        run: pip install -r python/dashboard/requirements.txt
-
-      - name: Compile Python Sources
-        run: python -m compileall python/dashboard
-
-      - name: Import Flask App
-        working-directory: python/dashboard
-        run: python -c "from app import app; print(app.url_map)"
-
   health-check:
     name: linux-e2e-health-check
     runs-on: ubuntu-latest

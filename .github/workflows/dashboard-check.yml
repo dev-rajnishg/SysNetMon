@@ -1,0 +1,31 @@
+name: dashboard-check
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+
+jobs:
+  dashboard-check:
+    name: python-dashboard-check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Dashboard Dependencies
+        run: pip install -r python/dashboard/requirements.txt
+
+      - name: Compile Python Sources
+        run: python -m compileall python/dashboard
+
+      - name: Import Flask App
+        working-directory: python/dashboard
+        run: python -c "from app import app; print(app.url_map)"
